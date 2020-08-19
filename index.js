@@ -26,8 +26,12 @@ client.once('ready', () => {
 	console.log('Ready!');
 })
 
+// Adding a bot command
+// 3. Add to bot_commands array to register
+// 2. Add case in switch statement
+// 1. Add a handler for the command
 
-const bot_commands = ['slap', 'raise']
+const bot_commands = ['slap', 'raise', 'cover']
 
 client.on('message', message => {
 
@@ -52,6 +56,10 @@ client.on('message', message => {
 			break
 		case `${prefix}raise`:
 			raiseHandler(message)
+			console.log('State: \n', data)
+			break
+		case `${prefix}cover`:
+			coverHandler(message)
 			console.log('State: \n', data)
 			break
 	}
@@ -169,6 +177,43 @@ const slapHandler = (message) => {
 	}
 }
 
+const coverHandler = (message) => {
+	const caster = message.member;
+	const caster_tag = message.member.user.tag;
+
+	// Check if caster has Tank role
+	if (!(message.member.roles.cache.some(role => role.name === 'Tank'))) {
+		// if caster is not a Tank 
+		message.channel.send(`Error. Only Tanks are allowed to cast cover`)
+		return
+	}
+
+	// Get target as first user mentioned
+	const target = message.mentions.members.first();
+
+	// Error handler - Invalid Target
+	if (typeof target === 'undefined') {
+		message.channel.send(`Invalid Target`)
+		return
+	}
+
+	// Get target tag
+	const target_tag = target.user.tag
+
+	if (caster_tag === target_tag) {
+		message.channel.send(`Error. Unable to cast cover on self!`)
+		return
+	}
+	// If target health is 0
+	if (data.filter(x => x.name === target_tag)[0].health === 0) {
+
+		message.channel.send(`Error. Unable to cast cover on dead target`)
+
+	} else {
+		data.filter(x => x.name === target_tag)[0].cover = caster_tag
+		message.channel.send(`${caster} casts cover on ${target}, absorbing next incoming attack! [Under development]`)
+	}
+}
 
 // petHandler +5 hp up to max
 // DPS Damage boost
