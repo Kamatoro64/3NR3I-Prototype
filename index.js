@@ -1,5 +1,5 @@
 const Discord = require('discord.js');
-const { prefix, token, serverId, raidChannelId } = require('./config-vault.json');
+const { prefix, token, serverId, raidChannelId } = require('./config.json');
 const schedule = require('node-schedule');
 const firstMessage = require('./first-message');
 const roleClaim = require('./role-claim');
