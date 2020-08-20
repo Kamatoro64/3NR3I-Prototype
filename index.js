@@ -9,9 +9,27 @@ const client = new Discord.Client();
 // Temporary storage for character data
 let data = []
 
+client.on("guildCreate", guild => {
+	client.channels.cache.find(channel => channel.name === "general").send(`
+Patch notes 20/8/2020:
+
+New features
+- !cover functionality implemented for Tanks
+- !raid  utility now available to retrieve the next raid time. (You need to be alive to cast this)
+
+Action changes 
+- !pet no longer increases rage, heal value remains unchanged +5
+- !slap damage reduced 25->20. Slap now increases target rage by +30
+	
+We noticed that users were using the !pet command in a passive aggressive way, this is fine but it did not make sense if a user wanted to use it to console someone when someone is having a bad day (lack of wholesomeness). Hence, !pet was reworked to remove its negative effects. Instead, the rage mechanic was reworked into the slap mechanic.
+
+There is no proper heal mechanic at this stage. !pet is a soft heal for everyone to have fun with at this point, hence it is not role locked to healers
+	`);
+})
+
 client.once('ready', () => {
 
-
+	//client.channels.cache.find(channel => channel.name === "general").send(`Patch notes: xxx`);
 	//Character initialisation on bot start up, resets on restart
 	// CURRENTLY SET TO EDEN TRAUMA
 	client.guilds.cache.get(serverId).members.cache.forEach(member => {
@@ -140,7 +158,7 @@ const slapHandler = (message) => {
 	}
 
 	// Get target as first user mentioned
-	const target = message.mentions.members.first();
+	let target = message.mentions.members.first();
 
 	// Error handler - Invalid Target
 	if (typeof target === 'undefined') {
@@ -148,21 +166,57 @@ const slapHandler = (message) => {
 		return
 	}
 
-	// Get target tag
-	const target_tag = target.user.tag
+	// Get target tag (subject to change based on cover status)
+	let target_tag = target.user.tag
+
 
 	switch (target_tag) {
-		case caster_tag: // Caster attempts to slap him/herself
-			message.channel.send(`Warning! Low IQ behavior detected. Please do not slap yourself`)
+		case caster_tag: // Caster attempts to slap him/herself - Does not remove cover status
+			message.channel.send(`Low IQ behaviour detected! Please do not slap yourself!`)
 			break;
 		case '3NR3I-Prototype#3325': // Bot specific
+			// Reduces caster HP to zero, Ignores cover status
 			data.filter(x => x.name === caster_tag)[0].health = 0
+
+			// Always reset caster's cover status
+			data.filter(x => x.name === caster_tag)[0].cover = null
+
 			message.channel.send(`Threat detected! Casting crippling slap on ${caster}. Target HP reduced to 0`)
 			break;
 		default:
 			// Default slapping behaviour
-			let damage = 25;
+			let damage = 20;
+			const rage_value = 30
 			const max_health = 100;
+
+			// Check if user is covered. this will be null if user is not covered
+			let new_target_tag = data.filter(x => x.name === target_tag)[0].cover
+
+			if (new_target_tag != null) {
+
+				// if the target's cover property is not null, log it and set it to null
+
+				console.log(`Target is covered, new target tag is ${new_target_tag} (subject to target being alive)`)
+
+
+				// Check if the covering tank is dead!
+				if (data.filter(x => x.name === new_target_tag)[0].health === 0) {
+					console.log(`Unable to cover, ${new_target_tag} is dead!`)
+					// Immediately remove target's cover status
+					data.filter(x => x.name === target_tag)[0].cover = null
+				} else {
+					// Covering tank is not dead, switch target and target tag
+					target_tag = new_target_tag
+
+					target = client.guilds.cache.get(serverId).members.cache.filter(member => member.user.tag === target_tag).first()
+				}
+
+			}
+			// At this point check if the caster is the tank him/herself in the first place
+			if (caster_tag === target_tag) {
+				message.channel.send(`Error. You may not slap the target you're covering!`)
+				return
+			}
 
 			let rage_damage = data.filter(x => x.name === caster_tag)[0].rage
 
@@ -170,25 +224,38 @@ const slapHandler = (message) => {
 			const current_health = data.filter(x => x.name === target_tag)[0].health
 
 			if (current_health === 0) {
-				message.channel.send(`${target} is already dead. Please raise target to contiune`);
+				message.channel.send(`${target} is already dead. What more do you want?`);
 			} else {
 
-				// If user does not have enough HP to survive damage, set HP to 0
+				// If user does not have enough HP to survive damage, set HP to 0 
 				if ((current_health - damage - rage_damage) <= 0) {
-					message.channel.send(`Slaps ${target} to death. Total damage = ${damage} + ${rage_damage} (rage damage)`);
+
+					// Set health to 0
 					data.filter(x => x.name === target_tag)[0].health = 0;
+					// Set rage to 0
+					data.filter(x => x.name === target_tag)[0].rage = 0;
+
+					message.channel.send(`Slaps ${target} to death. Total damage = ${damage} + ${rage_damage} (rage damage)`);
+
 				} else {
 					// If target doesn't die, calculate remaining health
 					let new_health = current_health - damage - rage_damage;
-					message.channel.send(`Slaps ${target} for ${damage} + ${rage_damage} (rage damage) HP - Remaining health ${new_health}/${max_health} `);
 					data.filter(x => x.name === target_tag)[0].health = new_health
+					data.filter(x => x.name === target_tag)[0].rage += rage_value;
+					message.channel.send(`Slaps ${target} for ${damage} + ${rage_damage} (rage damage) HP - Remaining HP ${new_health}/${max_health}, Target rage +${rage_value}`);
+
 				}
 				// If slap was successful, reset rage gauge to 0
-				data.filter(x => x.name === target_tag)[0].rage = 0
+				data.filter(x => x.name === caster_tag)[0].rage = 0
 			}
+
+			// Alwyas remove original target's cover status, no matter if tank dies or not
+			data.filter(x => x.name === message.mentions.members.first().user.tag)[0].cover = null
 
 
 	}
+
+
 }
 
 const coverHandler = (message) => {
@@ -224,8 +291,13 @@ const coverHandler = (message) => {
 		message.channel.send(`Error. Unable to cast cover on dead target`)
 
 	} else {
-		data.filter(x => x.name === target_tag)[0].cover = caster_tag
-		message.channel.send(`${caster} casts cover on ${target}, absorbing next incoming attack! [Under development]`)
+		if (data.filter(x => x.name === target_tag)[0].cover == null) {
+			// If target cover property is null, cover target
+			data.filter(x => x.name === target_tag)[0].cover = caster_tag
+			message.channel.send(`${caster} casts cover on ${target}, absorbing next incoming attack!`)
+		} else {
+			message.channel.send(`Error. Target is already being covered!`)
+		}
 	}
 }
 
@@ -268,7 +340,6 @@ const petHandler = (message) => {
 			// Default petting behaviour
 			const max_health = 100
 			const pet_heal = 5
-			const rage_value = 50
 
 			// Get target's current health
 			const current_health = data.filter(x => x.name === target_tag)[0].health
@@ -276,11 +347,10 @@ const petHandler = (message) => {
 			// Pet behaviour based on target's current HP
 			switch (current_health) {
 				case 0:
-					message.channel.send(`${target} is dead... Is this really the sort of thing you want to be doing O_O?`);
+					message.channel.send(`3NR3I silently judges you as you gently pat ${target}'s lifeless body...`);
 					break;
 				case max_health: // No HP change if already at Max health
-					data.filter(x => x.name === target_tag)[0].rage += rage_value
-					message.channel.send(`${caster} pets ${target} to assert dominance. Target rage (+${rage_value})`);
+					message.channel.send(`${caster} gently pets ${target}`);
 					break;
 				default:
 					let new_health = current_health + pet_heal;
@@ -290,8 +360,8 @@ const petHandler = (message) => {
 					}
 					// Update target's health and send message
 					data.filter(x => x.name === target_tag)[0].health = new_health
-					data.filter(x => x.name === target_tag)[0].rage += rage_value
-					message.channel.send(`${caster} pets ${target} to assert dominance! Target health (+${pet_heal}), target rage (+${rage_value})`);
+
+					message.channel.send(`${caster} gently pets ${target}. Target health (+${pet_heal})`);
 
 			}
 
