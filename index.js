@@ -1,5 +1,5 @@
 const Discord = require('discord.js');
-const { prefix, token, serverId } = require('./config.json');
+const { prefix, token, serverId, raidChannelId } = require('./config.json');
 const schedule = require('node-schedule');
 const firstMessage = require('./first-message');
 const roleClaim = require('./role-claim');
@@ -18,7 +18,8 @@ client.once('ready', () => {
 		data.push({
 			name: member.user.tag,
 			health: 100,
-			cover: null
+			cover: null,
+			rage: 0
 		})
 	})
 	console.log('Character data initialised: \n', data)
@@ -31,7 +32,7 @@ client.once('ready', () => {
 // 2. Add case in switch statement
 // 1. Add a handler for the command
 
-const bot_commands = ['slap', 'raise', 'cover']
+const bot_commands = ['raid', 'slap', 'raise', 'cover', 'pet']
 
 client.on('message', message => {
 
@@ -60,6 +61,14 @@ client.on('message', message => {
 			break
 		case `${prefix}cover`:
 			coverHandler(message)
+			console.log('State: \n', data)
+			break
+		case `${prefix}pet`:
+			petHandler(message)
+			console.log('State: \n', data)
+			break
+		case `${prefix}raid`:
+			raidHandler(message)
 			console.log('State: \n', data)
 			break
 	}
@@ -152,8 +161,10 @@ const slapHandler = (message) => {
 			break;
 		default:
 			// Default slapping behaviour
-			let damage = 35;
+			let damage = 25;
 			const max_health = 100;
+
+			let rage_damage = data.filter(x => x.name === caster_tag)[0].rage
 
 			// Check current health, if zero, 
 			const current_health = data.filter(x => x.name === target_tag)[0].health
@@ -163,16 +174,19 @@ const slapHandler = (message) => {
 			} else {
 
 				// If user does not have enough HP to survive damage, set HP to 0
-				if (current_health - damage <= 0) {
-					message.channel.send(`Slaps ${target} to death.`);
+				if ((current_health - damage - rage_damage) <= 0) {
+					message.channel.send(`Slaps ${target} to death. Total damage = ${damage} + ${rage_damage} (rage damage)`);
 					data.filter(x => x.name === target_tag)[0].health = 0;
 				} else {
 					// If target doesn't die, calculate remaining health
-					let new_health = current_health - damage;
-					message.channel.send(`Slaps ${target} for ${damage} HP - Remaining health ${new_health}/${max_health} `);
+					let new_health = current_health - damage - rage_damage;
+					message.channel.send(`Slaps ${target} for ${damage} + ${rage_damage} (rage damage) HP - Remaining health ${new_health}/${max_health} `);
 					data.filter(x => x.name === target_tag)[0].health = new_health
 				}
+				// If slap was successful, reset rage gauge to 0
+				data.filter(x => x.name === target_tag)[0].rage = 0
 			}
+
 
 	}
 }
@@ -215,7 +229,96 @@ const coverHandler = (message) => {
 	}
 }
 
-// petHandler +5 hp up to max
+const petHandler = (message) => {
+
+	// Message user logic
+	const caster = message.member;
+	const caster_tag = message.member.user.tag;
+
+	switch (caster_tag) {
+		/*
+		case "Shiro#1326":
+			message.channel.send(`Error - Lalafells are not allowed to slap. Please switch race and try again. You may purchase a Fantasia potion at the Mog Station`)
+			break;
+		*/
+		default:
+			console.log('No caster specific logic activated')
+	}
+
+	// Get target as first user mentioned
+	const target = message.mentions.members.first();
+
+	// Error handler - Invalid Target
+	if (typeof target === 'undefined') {
+		message.channel.send(`Invalid Target`)
+		return
+	}
+
+	// Get target tag
+	const target_tag = target.user.tag
+
+	switch (target_tag) {
+		case caster_tag: // Caster attempts to pet him/herself
+			message.channel.send(`O_O You're trying to pet yourself. Are you okay ${caster}?? This is a safe place, we're here for you!`)
+			break;
+		case '3NR3I-Prototype#3325': // Bot specific
+			message.channel.send(`UwU 3NR3I loves pets`)
+			break;
+		default:
+			// Default petting behaviour
+			const max_health = 100
+			const pet_heal = 5
+			const rage_value = 50
+
+			// Get target's current health
+			const current_health = data.filter(x => x.name === target_tag)[0].health
+
+			// Pet behaviour based on target's current HP
+			switch (current_health) {
+				case 0:
+					message.channel.send(`${target} is dead... Is this really the sort of thing you want to be doing O_O?`);
+					break;
+				case max_health: // No HP change if already at Max health
+					data.filter(x => x.name === target_tag)[0].rage += rage_value
+					message.channel.send(`${caster} pets ${target} to assert dominance. Target rage (+${rage_value})`);
+					break;
+				default:
+					let new_health = current_health + pet_heal;
+
+					if (new_health >= max_health) {
+						new_health = max_health
+					}
+					// Update target's health and send message
+					data.filter(x => x.name === target_tag)[0].health = new_health
+					data.filter(x => x.name === target_tag)[0].rage += rage_value
+					message.channel.send(`${caster} pets ${target} to assert dominance! Target health (+${pet_heal}), target rage (+${rage_value})`);
+
+			}
+
+	}
+}
+
+const raidHandler = async (message) => {
+
+
+	// async await here? 
+
+	// Get channel from by fetching raidChannelId (config.json)
+	raid_channel = await client.channels.fetch(raidChannelId)
+	console.log(raid_channel.messages)
+	console.log(typeof raid_channel.messages)
+
+	raid_channel.messages.fetch({ limit: 1 }).then(messages => {
+
+		message.channel.send(`${messages.first().content}`)
+	}).catch(err => {
+		console.error(err)
+	})
+
+
+}
+
+
 // DPS Damage boost
 // Tank traits - Mitigation? Next x seconds? Charge system 
-// Data persistance
+// Data persistence
