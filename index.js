@@ -1,5 +1,5 @@
 const Discord = require('discord.js');
-const { prefix, token, serverId, raidChannelId } = require('./config.json');
+const { prefix, token, serverId, raidChannelId } = require('./config-vault.json');
 const schedule = require('node-schedule');
 const firstMessage = require('./first-message');
 const roleClaim = require('./role-claim');
@@ -322,3 +322,28 @@ const raidHandler = async (message) => {
 // DPS Damage boost
 // Tank traits - Mitigation? Next x seconds? Charge system 
 // Data persistence
+
+// Feedback/Analysis
+// Pet mechanic is confusing. Consider shifting rage mechanic to slap and keep pet as a positive action. BALANCE
+// Adjust damage. Is 25 base damage too high? It is 25% of user's max HP.
+// Unlock higher level skills to balance effort? Levelling system... Red mage melee, midare setsugekka
+// RNG for fun. Astrologean cards
+
+// Slap damage: 25
+// Rage damage: 50
+// Pet heal: 5
+
+// economy system prototype
+// !buy potion -> potion + 1 to caster -> use potion -> check potion > 0, heal > potion -1
+// !buy other items?
+// But how to earn gold? Killing characters for gold is messy and can be toxic. Work toward a common goal maybe (raid boss hp % reward?)
+
+
+// Raid design
+// Boss appears in a different channel and stays there until someone slaps him, upon which he attacks anyone in the (raid? how?)
+// Once activated, at fixed intervals it will do fixed mechanics (raid wide + tank buster + autos etc). Aggro system Tank > Healer > DPS (if present and alive
+// !join to join raid. Raid boss accepts and adds player to list, cant escape damage if he goes away 
+
+// Raid boss has appeared. !join to join the raid! Raid commences when boss is attacked.
+// Begin -> Slapped -> check player list for tank, if yes > target = tank if not dead else healer -> DPS
+// Tank deals 10 dmg to tanks, 20 to healers and DPS for example, auto every 5 seconds on primary target (10 hits kills a tank if not healed)
