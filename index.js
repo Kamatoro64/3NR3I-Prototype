@@ -1,6 +1,7 @@
 const Discord = require('discord.js');
 const { prefix, token, serverId, raidChannelId } = require('./config.json');
 const schedule = require('node-schedule');
+const Player = require('./player');
 const firstMessage = require('./first-message');
 const roleClaim = require('./role-claim');
 
@@ -26,7 +27,7 @@ We noticed that users were using the !pet command in a passive aggressive way, t
 There is no proper heal mechanic at this stage. !pet is a soft heal for everyone to have fun with at this point, hence it is not role locked to healers
 	`);
 })
-
+/* // Temporarily commenting for rollback
 client.once('ready', () => {
 
 	//client.channels.cache.find(channel => channel.name === "general").send(`Patch notes: xxx`);
@@ -41,6 +42,18 @@ client.once('ready', () => {
 		})
 	})
 	console.log('Character data initialised: \n', data)
+
+	console.log('Ready!');
+})
+*/
+
+client.once('ready', () => {
+
+	client.guilds.cache.get(serverId).members.cache.forEach(member => {
+		data.push(new Player(member))
+	})
+
+	console.log('Character data initialised (Player class): \n', data)
 
 	console.log('Ready!');
 })
