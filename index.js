@@ -63,7 +63,7 @@ client.once('ready', () => {
 // 2. Add case in switch statement
 // 1. Add a handler for the command
 
-const bot_commands = ['raid', 'slap', 'raise', 'cover', 'pet']
+const bot_commands = ['midare', 'raid', 'slap', 'raise', 'cover', 'pet']
 
 client.on('message', message => {
 
@@ -100,6 +100,10 @@ client.on('message', message => {
 			break
 		case `${prefix}raid`:
 			raidHandler(message)
+			console.log('State: \n', data)
+			break
+		case `${prefix}midare`:
+			midareHandler(message)
 			console.log('State: \n', data)
 			break
 	}
@@ -380,6 +384,120 @@ const petHandler = (message) => {
 
 	}
 }
+
+const midareHandler = (message) => {
+
+	// Message user logic
+	const caster = message.member;
+	const caster_tag = message.member.user.tag;
+
+	switch (caster_tag) {
+
+		case "kageneko#2670": // Change this to filter on SAM
+
+			// Check if target has 3 sen!
+
+
+			// Get target as first user mentioned
+			let target = message.mentions.members.first();
+
+			// Error handler - Invalid Target
+			if (typeof target === 'undefined') {
+				message.channel.send(`Invalid Target`)
+				return
+			}
+
+			// Get target tag
+			let target_tag = target.user.tag
+
+			switch (target_tag) {
+				case caster_tag: // midare cannot be used on self
+					message.channel.send(`Error. Unable to cast on self`)
+					break;
+				case '3NR3I-Prototype#3325': // Bot specific - Immune (but should consume sen)
+					message.channel.send(`3NR3I casts Hallowed Ground. 0 Damage taken`)
+					break;
+				default:
+					// Default midare behaviour
+					let damage = 300;
+					const max_health = 100;
+
+					// Check if user is covered. this will be null if user is not covered
+					let new_target_tag = data.filter(x => x.name === target_tag)[0].cover
+
+					if (new_target_tag != null) {
+
+						// if the target's cover property is not null, log it and set it to null
+
+						console.log(`Target is covered, new target tag is ${new_target_tag} (subject to target being alive)`)
+
+
+						// Check if the covering tank is dead!
+						if (data.filter(x => x.name === new_target_tag)[0].health === 0) {
+							console.log(`Unable to cover, ${new_target_tag} is dead!`)
+							// Immediately remove target's cover status
+							data.filter(x => x.name === target_tag)[0].cover = null
+						} else {
+							// Covering tank is not dead, switch target and target tag
+							target_tag = new_target_tag
+
+							target = client.guilds.cache.get(serverId).members.cache.filter(member => member.user.tag === target_tag).first()
+						}
+
+					}
+					// At this point check if the caster is the tank him/herself in the first place (for midare this should not happen)
+					if (caster_tag === target_tag) {
+						message.channel.send(`Error. You may not cast Midare Setsugekka on target you're covering!`)
+						return
+					}
+
+					let rage_damage = data.filter(x => x.name === caster_tag)[0].rage
+
+					// Check current health, if zero, 
+					const current_health = data.filter(x => x.name === target_tag)[0].health
+
+					if (current_health === 0) {
+						message.channel.send(`Error. Unable to execute on dead target`);
+					} else {
+
+						// If user does not have enough HP to survive damage, set HP to 0 
+						if ((current_health - damage - rage_damage) <= 0) {
+
+							// Set health to 0
+							data.filter(x => x.name === target_tag)[0].health = 0;
+							// Set rage to 0
+							data.filter(x => x.name === target_tag)[0].rage = 0;
+
+							message.channel.send(`${caster} unleashes midare setsugekka on ${target}. Total damage = ${damage} + ${rage_damage} (rage damage). Target eliminated`, { files: ["https://thumbs.gfycat.com/EasygoingHeartyChuckwalla-size_restricted.gif"] });
+
+
+						} else {
+							// If target doesn't die, calculate remaining health. Should not happen for Midare at this point
+							let new_health = current_health - damage - rage_damage;
+							data.filter(x => x.name === target_tag)[0].health = new_health
+							data.filter(x => x.name === target_tag)[0].rage += rage_value;
+							message.channel.send(`Slaps ${target} for ${damage} + ${rage_damage} (rage damage) HP - Remaining HP ${new_health}/${max_health}, Target rage +${rage_value}`);
+
+						}
+						// If slap was successful, reset rage gauge to 0
+						data.filter(x => x.name === caster_tag)[0].rage = 0
+					}
+
+					// Alwyas remove original target's cover status, no matter if tank dies or not
+					data.filter(x => x.name === message.mentions.members.first().user.tag)[0].cover = null
+
+			}
+
+			break;
+
+		default:
+			message.channel.send(`Feature is still under BETA testing and is currently unavailable`)
+			console.log('Currently unavailable')
+	}
+
+
+}
+
 
 const raidHandler = async (message) => {
 
