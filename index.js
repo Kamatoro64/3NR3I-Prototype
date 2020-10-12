@@ -1,31 +1,28 @@
 const Discord = require('discord.js');
-const { prefix, token, serverId, raidChannelId } = require('./config.json');
+const { prefix, token, serverId, raidChannelId, riverChannelId } = require('./config.json');
 const schedule = require('node-schedule');
 const Player = require('./player');
-const firstMessage = require('./first-message');
 const roleClaim = require('./role-claim');
+const fetch = require("node-fetch");
 
 const client = new Discord.Client();
 
 // Temporary storage for character data
 let data = []
 
+let fish_species = [
+	{ name: 'Freshwater eel', rate: 0.3 },
+	{ name: 'River chub', rate: 0.6 },
+	{ name: 'Rainbow trout', rate: 0.1 }
+]
+
 client.on("guildCreate", guild => {
 	client.channels.cache.find(channel => channel.name === "general").send(`
-Patch notes 20/8/2020:
+Patch notes 23/8/2020:
 
-New features
-- !cover functionality implemented for Tanks
-- !raid  utility now available to retrieve the next raid time. (You need to be alive to cast this)
-
-Action changes 
-- !pet no longer increases rage, heal value remains unchanged +5
-- !slap damage reduced 25->20. Slap now increases target rage by +30
+!fish Command added
 	
-We noticed that users were using the !pet command in a passive aggressive way, this is fine but it did not make sense if a user wanted to use it to console someone when someone is having a bad day (lack of wholesomeness). Hence, !pet was reworked to remove its negative effects. Instead, the rage mechanic was reworked into the slap mechanic.
-
-There is no proper heal mechanic at this stage. !pet is a soft heal for everyone to have fun with at this point, hence it is not role locked to healers
-	`);
+`);
 })
 /* // Temporarily commenting for rollback
 client.once('ready', () => {
@@ -53,9 +50,39 @@ client.once('ready', () => {
 		data.push(new Player(member))
 	})
 
+	// JOB Assignments
+	data.find(player => player.name === 'kageneko#2670').job = 'SAM';
+	data.find(player => player.name === 'kageneko#2670').sen = 0;
+
+
+	// JOB Assignments
+	data.find(player => player.name === 'insom#8258').job = 'SAM';
+	data.find(player => player.name === 'insom#8258').sen = 0;
+
+
+
 	console.log('Character data initialised (Player class): \n', data)
 
 	console.log('Ready!');
+
+	function replenishEnergy() {
+		increment = 5;
+
+		//console.log('Replenishing energy');
+
+		data.forEach(player => {
+			//console.log(player.energy)
+			if ((player.energy + increment) >= 100) {
+				player.energy = 100
+			} else {
+				player.energy += increment
+			}
+		})
+
+	}
+
+	// Every minute
+	setInterval(replenishEnergy, 60000);
 })
 
 // Adding a bot command
@@ -63,7 +90,7 @@ client.once('ready', () => {
 // 2. Add case in switch statement
 // 1. Add a handler for the command
 
-const bot_commands = ['midare', 'raid', 'slap', 'raise', 'cover', 'pet']
+const bot_commands = ['midare', 'raid', 'slap', 'raise', 'cover', 'pet', 'fish', 'mount']
 
 client.on('message', message => {
 
@@ -105,6 +132,13 @@ client.on('message', message => {
 		case `${prefix}midare`:
 			midareHandler(message)
 			console.log('State: \n', data)
+			break
+		case `${prefix}fish`:
+			fishHandler(message)
+			console.log('State: \n', data)
+			break
+		case `${prefix}mount`:
+			mountHandler(message)
 			break
 	}
 })
@@ -323,6 +357,7 @@ const petHandler = (message) => {
 	// Message user logic
 	const caster = message.member;
 	const caster_tag = message.member.user.tag;
+	const player = data.find(player => player.name === caster_tag)
 
 	switch (caster_tag) {
 		/*
@@ -348,10 +383,10 @@ const petHandler = (message) => {
 
 	switch (target_tag) {
 		case caster_tag: // Caster attempts to pet him/herself
-			message.channel.send(`O_O You're trying to pet yourself. Are you okay ${caster}?? This is a safe place, we're here for you!`)
+			message.channel.send(`${caster}, are you alright? Do you require assistance/lubrication?`)
 			break;
 		case '3NR3I-Prototype#3325': // Bot specific
-			message.channel.send(`UwU 3NR3I loves pets`)
+			message.channel.send(`UwU Wait a second, am I... enjoying this?`)
 			break;
 		default:
 			// Default petting behaviour
@@ -361,25 +396,47 @@ const petHandler = (message) => {
 			// Get target's current health
 			const current_health = data.filter(x => x.name === target_tag)[0].health
 
-			// Pet behaviour based on target's current HP
-			switch (current_health) {
-				case 0:
-					message.channel.send(`3NR3I silently judges you as you gently pat ${target}'s lifeless body...`);
-					break;
-				case max_health: // No HP change if already at Max health
-					message.channel.send(`${caster} gently pets ${target}`);
-					break;
-				default:
-					let new_health = current_health + pet_heal;
+			// If player is samurai, check sen conditions and x use default pet mechanic
+			if (player.job === 'SAM') {
+				if (target_tag === 'Saffron#7787') {
 
-					if (new_health >= max_health) {
-						new_health = max_health
+					if (player.name === 'insom#8258' || player.name === 'kageneko#2670') { // Filtering on sig for spefic lyra interaction
+
+						if (player.sen === 3) {
+							// Sen gauge full
+							message.channel.send(`${caster} gently pets ${target}`)
+						} else {
+							// Increase sen by 1
+							player.sen += 1
+
+							message.channel.send(`${caster} gently pets ${target}, Sen gauge +1 (${player.sen}/3)`)
+						}
 					}
-					// Update target's health and send message
-					data.filter(x => x.name === target_tag)[0].health = new_health
+				} else {
+					message.channel.send(`${caster} gently pets ${target}`)
+				}
+			} else {
 
-					message.channel.send(`${caster} gently pets ${target}. Target health (+${pet_heal})`);
+				// Pet behaviour based on target's current HP
+				switch (current_health) {
+					case 0:
+						message.channel.send(`* Watches curiously as ${caster} gently pets ${target}'s lifeless body...`);
+						break;
+					case max_health: // No HP change if already at Max health
+						message.channel.send(`${caster} gently pets ${target}`);
+						break;
+					default:
+						let new_health = current_health + pet_heal;
 
+						if (new_health >= max_health) {
+							new_health = max_health
+						}
+						// Update target's health and send message
+						data.filter(x => x.name === target_tag)[0].health = new_health
+
+						message.channel.send(`${caster} gently pets ${target}. Target health (+${pet_heal})`);
+
+				}
 			}
 
 	}
@@ -390,13 +447,14 @@ const midareHandler = (message) => {
 	// Message user logic
 	const caster = message.member;
 	const caster_tag = message.member.user.tag;
+	const player = data.find(player => player.name === caster_tag)
 
-	switch (caster_tag) {
+	// If player is a samurai
+	if (player.job === 'SAM') {
 
-		case "kageneko#2670": // Change this to filter on SAM
 
-			// Check if target has 3 sen!
-
+		// Check if target has 3 sen!
+		if (player.sen === 3) {
 
 			// Get target as first user mentioned
 			let target = message.mentions.members.first();
@@ -468,7 +526,14 @@ const midareHandler = (message) => {
 							// Set rage to 0
 							data.filter(x => x.name === target_tag)[0].rage = 0;
 
-							message.channel.send(`${caster} unleashes midare setsugekka on ${target}. Total damage = ${damage} + ${rage_damage} (rage damage). Target eliminated`, { files: ["https://thumbs.gfycat.com/EasygoingHeartyChuckwalla-size_restricted.gif"] });
+
+							// Sig specific animation
+							if (player.name === 'insom#8258') {
+								message.channel.send(`${caster} unleashes midare setsugekka on ${target}. Total damage = ${damage} + ${rage_damage} (rage damage). Target eliminated`, { files: ["https://thumbs.gfycat.com/YearlySardonicHarpseal-size_restricted.gif"] });
+							} else {
+								message.channel.send(`${caster} unleashes midare setsugekka on ${target}. Total damage = ${damage} + ${rage_damage} (rage damage). Target eliminated`, { files: ["https://thumbs.gfycat.com/EasygoingHeartyChuckwalla-size_restricted.gif"] });
+							}
+
 
 
 						} else {
@@ -478,9 +543,12 @@ const midareHandler = (message) => {
 							data.filter(x => x.name === target_tag)[0].rage += rage_value;
 							message.channel.send(`Slaps ${target} for ${damage} + ${rage_damage} (rage damage) HP - Remaining HP ${new_health}/${max_health}, Target rage +${rage_value}`);
 
+
 						}
 						// If slap was successful, reset rage gauge to 0
 						data.filter(x => x.name === caster_tag)[0].rage = 0
+						// Reset sen gauge
+						player.sen = 0
 					}
 
 					// Alwyas remove original target's cover status, no matter if tank dies or not
@@ -488,26 +556,88 @@ const midareHandler = (message) => {
 
 			}
 
-			break;
 
-		default:
-			message.channel.send(`Feature is still under BETA testing and is currently unavailable`)
-			console.log('Currently unavailable')
+		} else {
+			const current_sen = player.sen
+			message.channel.send(`Insufficient Sen! Current Sen gauge (${current_sen}/3)`)
+		}
 	}
 
 
 }
 
+const fishHandler = (message) => {
+	const energy_requirement = 25;
+	const caster = message.member;
+	const caster_tag = message.member.user.tag;
+
+	// Everyone can fish for now so no role checks
+
+	// No specific target, only limitation is that it can only be done in river channel
+	if (message.channel.id === riverChannelId) {
+		const current_energy = data.filter(x => x.name === caster_tag)[0].energy
+		if (current_energy < energy_requirement) {
+			message.channel.send(`You look tired. Maybe you should take a break to recover. I.. I made you some rice balls. I'm not sure what they taste like but according to my database they're a good source of energy. Energy: ${current_energy}/100 `)
+			return
+		} else {
+			data.filter(x => x.name === caster_tag)[0].energy -= energy_requirement
+		}
+
+		const fish_roll = Math.random();
+		const fish_type_roll = Math.random();
+		const otter_roll = Math.random();
+
+		// as hook rate inreases, chances increases (higher probability that random number is <= hook rate)
+		const hook_rate = 0.4;
+		const otter_rate = 0.5;
+		let fish_type = fish_species.filter(fish => fish_type_roll >= 1 - fish.rate).sort((a, b) => a.rate - b.rate)[0]
+
+
+		if (typeof fish_type === 'undefined') {
+
+			fish_type = fish_species.sort((a, b) => a.rate - b.rate)[fish_species.length - 1]
+
+		}
+
+
+		// Implement fish types types and value
+
+		if (fish_roll >= hook_rate && otter_roll >= otter_rate) { // Catch and keep 0.6 * 0.5= 0.3
+
+			// Add fish to inventory (items)
+			data.filter(x => x.name === caster_tag)[0].inventory.addItem(fish_type.name, 1);
+
+			// Get new count
+			const new_count = data.filter(x => x.name === caster_tag)[0].inventory.items.get(fish_type.name)
+
+			// Tell user fish caught and display new count
+			message.channel.send(`:fishing_pole_and_fish: You managed to catch a ${fish_type.name}! - ${fish_type.name} has been added to your inventory (current: ${new_count})`)
+
+		}
+		else if (fish_roll >= hook_rate && otter_roll < otter_rate) { // Catch but otter steals 0.6*0.5=0.3
+			message.channel.send(`:otter: You managed to catch a ${fish_type.name} but a wild otter appears and runs away with your catch!`)
+		} else { // 0.4
+			message.channel.send(`You didn't manage to catch anything...`)
+		}
+		console.log(data.filter(x => x.name === caster_tag)[0].inventory.items)
+
+	} else {
+		message.channel.send(`There doesn't seem to be anywhere to fish here, maybe we could check out the nearby river. It..It's not like I want to come with you or anything! I just don't want to have to look for you if you get lost!`)
+	}
+
+
+}
 
 const raidHandler = async (message) => {
 
-
+	if (message.channel.id === raidChannelId) {
+		message.reply(`Do not run the !raid command in this channel! The last message of this channel should reflect the latest raid schedule.`)
+		return
+	}
 	// async await here? 
 
 	// Get channel from by fetching raidChannelId (config.json)
 	raid_channel = await client.channels.fetch(raidChannelId)
-	console.log(raid_channel.messages)
-	console.log(typeof raid_channel.messages)
 
 	raid_channel.messages.fetch({ limit: 1 }).then(messages => {
 
@@ -519,6 +649,69 @@ const raidHandler = async (message) => {
 
 }
 
+const mountHandler = async (message) => {
+
+
+	// async await here? 
+
+	// Get channel from by fetching raidChannelId (config.json)
+
+	const search_string = message.content.replace("!mount ", "");
+
+	await fetch("https://ffxivcollect.com/api/mounts").then(res => res.json()).then(json => {
+		// Find by name
+		let result = json.results.find(mount => mount.name.toUpperCase() === search_string.toUpperCase())
+
+		if (typeof result === 'undefined') {
+			// try source name (usually trial name)
+
+			const result = json.results.find(mount => mount.sources.some(source => source.text.toUpperCase().includes(search_string.toUpperCase())))
+			//console.log(result)
+			if (typeof result === 'undefined') {
+				message.channel.send(`No results for serch string ${search_string}`)
+
+			} else {
+				const embed = new Discord.MessageEmbed()
+					.setTitle(result.name)
+					.setThumbnail(result.image)
+					.addField("Description", result.description)
+					.addField("Enhanced Description", result.enhanced_description)
+					.addField("Flying", result.flying, "Seats", result.seats)
+					.addField("Source Type", result.sources[0].type, "Source Text", result.sources[0].text)
+					.addField("Source Text", result.sources[0].text)
+				message.channel.send(embed)
+				//message.channel.send(JSON.stringify(result, null, 2))
+			}
+
+		} else {
+			const embed = new Discord.MessageEmbed()
+				.setTitle(result.name)
+				.setThumbnail(result.image)
+				.addField("Description", result.description)
+				.addField("Enhanced Description", result.enhanced_description)
+				.addField("Flying", result.flying, "Seats", result.seats)
+				.addField("Source Type", result.sources[0].type, "Source Text", result.sources[0].text)
+				.addField("Source Text", result.sources[0].text)
+			message.channel.send(embed)
+			//message.channel.send(JSON.stringify(result, null, 2))
+		}
+
+	}
+	)
+}
+/* Clears bot messages max 100 at a time
+const clearBotMessages = async (message) => {
+	if (message.member.hasPermission('ADMINISTRATOR')) {
+		await message.channel.messages.fetch({ limit: 100 }).then(messages => {
+			botMessages = messages.filter(msg => msg.content === `!clearchannel`)
+			message.channel.bulkDelete(botMessages)
+
+		})
+	} else {
+		message.reply(`You need ADMINISTRATOR permissions to use this command`)
+	}
+}
+*/
 
 // DPS Damage boost
 // Tank traits - Mitigation? Next x seconds? Charge system 
