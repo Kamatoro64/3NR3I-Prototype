@@ -1,8 +1,7 @@
 const Discord = require('discord.js');
-const { prefix, token, serverId, raidChannelId, riverChannelId } = require('./config.json');
+const { prefix, serverId, raidChannelId, riverChannelId } = require('./config.json');
 const schedule = require('node-schedule');
 const Player = require('./player');
-const roleClaim = require('./role-claim');
 const fetch = require("node-fetch");
 
 const client = new Discord.Client();
@@ -143,7 +142,7 @@ client.on('message', message => {
 	}
 })
 
-client.login(token);
+client.login(process.env.DJS_TOKEN);
 
 
 const getBotCommand = (message) => {
