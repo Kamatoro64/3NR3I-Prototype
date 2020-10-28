@@ -101,6 +101,7 @@ client.on('message', message => {
 	const caster_tag = message.member.user.tag;
 
 	// Check if caster is dead, also prevents healers from self raising
+	console.log(caster_tag)
 	if (message.content.startsWith(`${prefix}`) && data.filter(x => x.name === caster_tag)[0].health === 0) {
 		message.channel.send(`Error. Unable to cast ${bot_command} when dead! Ask a healer for a raise`)
 		return
