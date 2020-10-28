@@ -51,6 +51,8 @@ client.once('ready', () => {
 	console.log(`Current guild = ${currentGuild}`)
 	console.log(`Type of ${currentGuild} is ${typeof currentGuild}`)
 
+	console.log(currentGuild.members)
+
 	currentGuild.members.fetch().then(
 		member => {
 			console.log(member)
