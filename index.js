@@ -43,7 +43,7 @@ client.once('ready', () => {
 })
 */
 
-client.once('ready', async () => {
+client.once('ready', () => {
 
 	console.log('Initialising users...')
 	//client.guilds Type is GuildManager | client.guilds.cache Type is Collection<Snowflake, Guild> 
@@ -53,7 +53,7 @@ client.once('ready', async () => {
 		console.log(x)
 	})
 
-
+	/*
 	await currentGuild.members.fetch().then(
 		memberCollection => {
 			for (var member in memberCollection) {
@@ -63,6 +63,7 @@ client.once('ready', async () => {
 
 	)
 
+		*/
 
 	console.log(data)
 
