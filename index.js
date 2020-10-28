@@ -43,7 +43,7 @@ client.once('ready', () => {
 })
 */
 
-client.once('ready', () => {
+client.once('ready', async () => {
 
 	console.log('Initialising users...')
 	//client.guilds Type is GuildManager | client.guilds.cache Type is Collection<Snowflake, Guild> 
