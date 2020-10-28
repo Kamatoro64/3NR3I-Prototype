@@ -47,6 +47,12 @@ client.once('ready', () => {
 
 	console.log('Initialising users...')
 	const currentGuild = client.guilds.cache.get(serverId);
+	console.log(`Current guild = ${currentGuild}`)
+	currentGuild.members.fetch().then(
+		member => {
+			console.log(member)
+		}
+	)
 
 	currentGuild.members.fetch().then(
 		member => {
