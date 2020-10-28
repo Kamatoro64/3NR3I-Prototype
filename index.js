@@ -49,6 +49,7 @@ client.once('ready', async () => {
 	//client.guilds Type is GuildManager | client.guilds.cache Type is Collection<Snowflake, Guild> 
 	const currentGuild = client.guilds.cache.get(serverId); // Returns Guild Object (Represents a guild/server)
 
+	console.log(currentGuild.members.cache)
 
 
 	await currentGuild.members.fetch().then(
