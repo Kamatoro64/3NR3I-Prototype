@@ -46,19 +46,20 @@ client.once('ready', () => {
 client.once('ready', () => {
 
 	console.log('Initialising users...')
-	const currentGuild = client.guilds.cache.get(serverId);
+	//client.guilds Type is GuildManager | client.guilds.cache Type is Collection<Snowflake, Guild> 
+	const currentGuild = client.guilds.cache.get(serverId); // Returns Guild Object (Represents a guild/server)
 
-	console.log(`Current guild = ${currentGuild}`)
-	console.log(`Type of ${currentGuild} is ${typeof currentGuild}`)
-
-	console.log(currentGuild.members.guild)
+	console.log(currentGuild.members.fetch())
 
 
 
-	currentGuild.fetchMembers().then(
-		member => {
-			data.push(new Player(member))
+	currentGuild.members.fetch().then(
+		memberCollection => {
+			for (var member in memberCollection) {
+				data.push(new Player(member))
+			}
 		}
+
 	)
 
 
