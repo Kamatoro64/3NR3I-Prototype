@@ -49,20 +49,11 @@ client.once('ready', async () => {
 	//client.guilds Type is GuildManager | client.guilds.cache Type is Collection<Snowflake, Guild> 
 	const currentGuild = client.guilds.cache.get(serverId); // Returns Guild Object (Represents a guild/server)
 
-	currentGuild.members.cache.forEach(x => {
-		console.log(`printing user`)
-		console.log(x)
+	await currentGuild.members.cache.forEach(member => {
+		data.push(new Player(member))
 	})
 
 
-	await currentGuild.members.fetch().then(
-		memberCollection => {
-			for (var member in memberCollection) {
-				data.push(new Player(member))
-			}
-		}
-
-	)
 
 
 
