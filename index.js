@@ -53,13 +53,9 @@ client.once('ready', () => {
 
 	console.log(currentGuild.members.guild)
 
-	currentGuild.members.guild.members.fetch().then(
-		member => {
-			console.log(member)
-		}
-	)
 
-	currentGuild.members.guild.members.fetch().then(
+
+	currentGuild.fetchMembers().then(
 		member => {
 			data.push(new Player(member))
 		}
