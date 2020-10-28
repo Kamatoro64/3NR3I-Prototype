@@ -47,7 +47,7 @@ client.once('ready', () => {
 
 	console.log(`test`)
 
-	client.guilds.cache.get(serverId).members.cache.forEach(member => {
+	client.guilds.get(serverId).members.cache.forEach(member => {
 		data.push(new Player(member))
 	})
 
