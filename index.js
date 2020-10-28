@@ -47,7 +47,10 @@ client.once('ready', () => {
 
 	console.log('Initialising users...')
 	const currentGuild = client.guilds.cache.get(serverId);
+
 	console.log(`Current guild = ${currentGuild}`)
+	console.log(`Type of ${currentGuild} is ${typeof currentGuild}`)
+
 	currentGuild.members.fetch().then(
 		member => {
 			console.log(member)
