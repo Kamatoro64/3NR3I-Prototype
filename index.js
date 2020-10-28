@@ -49,6 +49,8 @@ client.once('ready', () => {
 		data.push(new Player(member))
 	})
 
+	console.log(data)
+
 	// JOB Assignments
 	data.find(player => player.name === 'kageneko#2670').job = 'SAM';
 	data.find(player => player.name === 'kageneko#2670').sen = 0;
