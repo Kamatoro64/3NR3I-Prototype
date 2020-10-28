@@ -45,9 +45,9 @@ client.once('ready', () => {
 
 client.once('ready', () => {
 
-	console.log(`test`)
+	console.log('Initialising users...')
 
-	client.guilds.get(serverId).members.cache.forEach(member => {
+	client.guilds.cache.get(serverId).guild.members.forEach(member => {
 		data.push(new Player(member))
 	})
 
