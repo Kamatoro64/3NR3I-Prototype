@@ -4,7 +4,7 @@ const schedule = require('node-schedule');
 const Player = require('./player');
 const fetch = require("node-fetch");
 
-const client = new Discord.Client({ ws: { intents: ['GUILD_PRESENCES'] } });
+const client = new Discord.Client({ ws: { intents: ['GUILDS', 'GUILD_MESSAGES', 'GUILD_PRESENCES'] } });
 
 // Temporary storage for character data
 let data = []
@@ -43,17 +43,18 @@ client.once('ready', () => {
 })
 */
 
-client.once('ready', () => {
+client.once('ready', async () => {
 
 	console.log('Initialising users...')
 	//client.guilds Type is GuildManager | client.guilds.cache Type is Collection<Snowflake, Guild> 
 	const currentGuild = client.guilds.cache.get(serverId); // Returns Guild Object (Represents a guild/server)
 
 	currentGuild.members.cache.forEach(x => {
+		console.log(`printing user`)
 		console.log(x)
 	})
 
-	/*
+
 	await currentGuild.members.fetch().then(
 		memberCollection => {
 			for (var member in memberCollection) {
@@ -63,7 +64,7 @@ client.once('ready', () => {
 
 	)
 
-		*/
+
 
 	console.log(data)
 
