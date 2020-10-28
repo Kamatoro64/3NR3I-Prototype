@@ -4,7 +4,7 @@ const schedule = require('node-schedule');
 const Player = require('./player');
 const fetch = require("node-fetch");
 
-const client = new Discord.Client();
+const client = new Discord.Client({ ws: { intents: ['GUILD_PRESENCES'] } });
 
 // Temporary storage for character data
 let data = []
